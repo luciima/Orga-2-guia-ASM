@@ -14,7 +14,7 @@ TRUE  EQU 1
 ; Funciones a implementar:
 ;   - es_indice_ordenado
 global EJERCICIO_1A_HECHO
-EJERCICIO_1A_HECHO: db FALSE ; Cambiar por `TRUE` para correr los tests.
+EJERCICIO_1A_HECHO: db TRUE ; Cambiar por `TRUE` para correr los tests.
 
 ; Marca el ejercicio 1B como hecho (`true`) o pendiente (`false`).
 ;
@@ -25,12 +25,12 @@ EJERCICIO_1B_HECHO: db FALSE ; Cambiar por `TRUE` para correr los tests.
 
 ;########### ESTOS SON LOS OFFSETS Y TAMAÑO DE LOS STRUCTS
 ; Completar las definiciones (serán revisadas por ABI enforcer):
-ITEM_NOMBRE EQU ??
-ITEM_FUERZA EQU ??
-ITEM_DURABILIDAD EQU ??
-ITEM_SIZE EQU ??
+ITEM_NOMBRE EQU 0 ; 18b
+ITEM_FUERZA EQU 20 ; 4b
+ITEM_DURABILIDAD EQU 24 ; 2b
+ITEM_SIZE EQU 28
 
-;; La funcion debe verificar si una vista del inventario está correctamente 
+;; La funcion debe verificar si una vista del inventario está correctamente
 ;; ordenada de acuerdo a un criterio (comparador)
 
 ;; bool es_indice_ordenado(item_t** inventario, uint16_t* indice, uint16_t tamanio, comparador_t comparador);
@@ -42,7 +42,7 @@ ITEM_SIZE EQU ??
 ;; - `tamanio`: El tamaño del inventario (y de la vista).
 ;; - `comparador`: La función de comparación que a utilizar para verificar el
 ;;   orden.
-;; 
+;;
 ;; Tenga en consideración:
 ;; - `tamanio` es un valor de 16 bits. La parte alta del registro en dónde viene
 ;;   como parámetro podría tener basura.
@@ -55,15 +55,70 @@ ITEM_SIZE EQU ??
 
 global es_indice_ordenado
 es_indice_ordenado:
-	; Te recomendamos llenar una tablita acá con cada parámetro y su
-	; ubicación según la convención de llamada. Prestá atención a qué
-	; valores son de 64 bits y qué valores son de 32 bits o 8 bits.
-	;
-	; r/m64 = item_t**     inventario
-	; r/m64 = uint16_t*    indice
-	; r/m16 = uint16_t     tamanio
-	; r/m64 = comparador_t comparador
-		ret
+; Te recomendamos llenar una tablita acá con cada parámetro y su
+; ubicación según la convención de llamada. Prestá atención a qué
+; valores son de 64 bits y qué valores son de 32 bits o 8 bits.
+;
+; r/m64 = item_t**     inventario  RDI
+; r/m64 = uint16_t*    indice      RSI
+; r/m16 = uint16_t     tamanio     DX
+; r/m64 = comparador_t comparador  RCX
+
+push RBP
+mov RBP, RSP
+push R12
+push R13
+push R14
+push R15
+push RBX
+sub RSP, 8
+
+mov R12W, DX ; contador de elementos
+mov R14, [RDI] ; direccion del inventario = direccion del puntero al elemento 1
+mov R15, RSI ; direccion del indice
+mov RBX, RCX
+movzx R11, word [R15] ; primer numero del indice
+add R15, 2
+shl R11, 3 ; multiplicar por 8 para obtener el offset del elemento
+mov R9, R14
+add R9, R11
+mov R13, R9 ; R13 = elemento anterior a comparar
+sub R12W, 1
+
+.loop:
+cmp R12W, 0
+je .resTrue
+movzx R11, word [R15] ; primer numero del indice
+add R15, 2
+shl R11, 3 ; multiplicar por 8 para obtener el offset del elemento
+mov R9, R14
+add R9, R11
+mov RDI, R13 ; primer elemento a comparar
+mov RSI, R9
+mov R13, R9
+call RBX
+cmp AX, 0 
+je .resFalse
+sub R12W, 1
+jmp .loop
+
+.resFalse:
+mov RAX, 0
+jmp .end 
+
+.resTrue:
+mov RAX, 1
+jmp .end
+
+.end:
+add RSP, 8 
+pop RBX
+pop R15
+pop R14
+pop R13
+pop R12
+pop RBP
+ret
 
 ;; Dado un inventario y una vista, crear un nuevo inventario que mantenga el
 ;; orden descrito por la misma.
@@ -79,7 +134,7 @@ es_indice_ordenado:
 ;; - `indice` es el arreglo de índices en el inventario que representa la vista
 ;;   que vamos a usar para reorganizar el inventario.
 ;; - `tamanio` es el tamaño del inventario.
-;; 
+;;
 ;; Tenga en consideración:
 ;; - Tanto los elementos de `inventario` como los del resultado son punteros a
 ;;   `ítems`. Se pide *copiar* estos punteros, **no se deben crear ni clonar
@@ -87,11 +142,11 @@ es_indice_ordenado:
 
 global indice_a_inventario
 indice_a_inventario:
-	; Te recomendamos llenar una tablita acá con cada parámetro y su
-	; ubicación según la convención de llamada. Prestá atención a qué
-	; valores son de 64 bits y qué valores son de 32 bits o 8 bits.
-	;
-	; r/m64 = item_t**  inventario
-	; r/m64 = uint16_t* indice
-	; r/m16 = uint16_t  tamanio
-	ret
+; Te recomendamos llenar una tablita acá con cada parámetro y su
+; ubicación según la convención de llamada. Prestá atención a qué
+; valores son de 64 bits y qué valores son de 32 bits o 8 bits.
+;
+; r/m64 = item_t**  inventario
+; r/m64 = uint16_t* indice
+; r/m16 = uint16_t  tamanio
+ret
